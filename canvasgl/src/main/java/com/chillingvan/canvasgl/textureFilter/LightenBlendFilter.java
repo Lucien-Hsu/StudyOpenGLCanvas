@@ -27,6 +27,9 @@ import android.support.annotation.NonNull;
  * Created by Chilling on 2016/10/23.
  */
 
+/**
+ * 此濾鏡取兩張貼圖中最亮的顏色顯示
+ */
 public class LightenBlendFilter extends TwoTextureFilter {
     public static final String LIGHTEN_BLEND_FRAGMENT_SHADER =
             "precision mediump float; \n"+
@@ -41,6 +44,8 @@ public class LightenBlendFilter extends TwoTextureFilter {
             "    lowp vec4 textureColor = texture2D(" + TEXTURE_SAMPLER_UNIFORM + ", " + VARYING_TEXTURE_COORD + ");\n" +
             "    lowp vec4 textureColor2 = texture2D(" + UNIFORM_TEXTURE_SAMPLER2 + ", " + VARYING_TEXTURE_COORD2 + ");\n" +
             "    \n" +
+
+            //取兩張貼圖的最高值，即取最亮的顏色
             "    gl_FragColor = max(textureColor, textureColor2);\n" +
             " }";
 

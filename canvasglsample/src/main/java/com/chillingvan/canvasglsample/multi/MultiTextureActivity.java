@@ -39,6 +39,7 @@ public class MultiTextureActivity extends AppCompatActivity {
     private String mCameraId;
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCaptureSession;
+    //此為自定義的 TextureView 裡面有指定套用濾鏡
     private MultiVideoTexture multiVideoTexture;
 
     {
@@ -50,6 +51,7 @@ public class MultiTextureActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_multi_texture);
+        //若版本太低則跳出不支援的提示
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             Toast.makeText(this, "This only support >= Lollipop, 21", Toast.LENGTH_LONG).show();
             finish();
@@ -58,75 +60,10 @@ public class MultiTextureActivity extends AppCompatActivity {
 
     }
 
-    private void initTextures() {
-        multiVideoTexture = findViewById(R.id.multi_texture);
-        multiVideoTexture.setSurfaceTextureCreatedListener(new GLMultiTexProducerView.SurfaceTextureCreatedListener() {
-            @Override
-            public void onCreated(List<GLTexture> glTextureList) {
-                mediaSurfaces.clear();
-                for (int i = 0; i < mediaPlayers.size(); i++) {
-                    GLTexture glTexture = glTextureList.get(i);
-                    mediaSurfaces.add(new Surface(glTexture.getSurfaceTexture()));
-                }
-
-                createCameraPreviewSession(glTextureList.get(2).getSurfaceTexture());
-            }
-        });
-    }
-
-    private void createCameraPreviewSession(SurfaceTexture texture) {
-        try {
-            assert texture != null;
-            // We configure the size of default buffer to be the size of camera preview we want.
-//            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-
-            // This is the output Surface we need to start preview.
-            Surface surface = new Surface(texture);
-
-            // We set up a CaptureRequest.Builder with the output Surface.
-            final CaptureRequest.Builder mPreviewRequestBuilder
-                    = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            mPreviewRequestBuilder.addTarget(surface);
-
-            // Here, we create a CameraCaptureSession for camera preview.
-            mCameraDevice.createCaptureSession(Arrays.asList(surface),
-                    new CameraCaptureSession.StateCallback() {
-
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            // The camera is already closed
-                            if (null == mCameraDevice) {
-                                return;
-                            }
-
-                            // When the session is ready, we start displaying the preview.
-                            mCaptureSession = cameraCaptureSession;
-                            try {
-                                // Auto focus should be continuous for camera preview.
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-
-                                // Finally, we start displaying the camera preview.
-                                CaptureRequest mPreviewRequest = mPreviewRequestBuilder.build();
-                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
-                                        null, null);
-                            } catch (CameraAccessException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                        @Override
-                        public void onConfigureFailed(
-                                @NonNull CameraCaptureSession cameraCaptureSession) {
-                            Toast.makeText(MultiTextureActivity.this, "Failed", Toast.LENGTH_SHORT).show();
-                        }
-                    }, null
-            );
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
+    /**
+     * 打開相機
+     * 初始化TextureView
+     */
     @Override
     protected void onResume() {
         super.onResume();
@@ -135,74 +72,14 @@ public class MultiTextureActivity extends AppCompatActivity {
         multiVideoTexture.onResume();
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        closeCamera();
-        multiVideoTexture.onPause();
-        for (MediaPlayerHelper mediaPlayer : mediaPlayers) {
-            if (mediaPlayer.isPlaying()) {
-                mediaPlayer.stop();
-            }
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        for (MediaPlayerHelper mediaPlayer : mediaPlayers) {
-            if (mediaPlayer.isPlaying()) {
-                mediaPlayer.release();
-            }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private void openCamera(int width, int height) {
-        setUpCameraOutputs(width, height);
-        Activity activity = this;
-        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-        try {
-            manager.openCamera(mCameraId, new CameraDevice.StateCallback() {
-                @Override
-                public void onOpened(@NonNull CameraDevice camera) {
-                    mCameraDevice = camera;
-
-                }
-
-                @Override
-                public void onDisconnected(@NonNull CameraDevice camera) {
-                    camera.close();
-                    mCameraDevice = null;
-
-                }
-
-                @Override
-                public void onError(@NonNull CameraDevice camera, int error) {
-                    camera.close();
-
-                }
-            }, null);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void closeCamera() {
-        if (null != mCaptureSession) {
-            mCaptureSession.close();
-            mCaptureSession = null;
-        }
-        if (null != mCameraDevice) {
-            mCameraDevice.close();
-            mCameraDevice = null;
-        }
-    }
-
-
+    /**
+     * 取得前鏡頭相機編號
+     */
     private void setUpCameraOutputs(int width, int height) {
+        //取得相機服務
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
+            //遍歷取得前鏡頭
             for (String cameraId : manager.getCameraIdList()) {
                 // 获取指定摄像头的特性
                 CameraCharacteristics characteristics
@@ -248,6 +125,173 @@ public class MultiTextureActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 打開相機
+     */
+    @SuppressLint("MissingPermission")
+    private void openCamera(int width, int height) {
+        //取得前鏡頭相機編號
+        setUpCameraOutputs(width, height);
+        Activity activity = this;
+        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+        try {
+            //打開指定編號之相機
+            manager.openCamera(mCameraId, new CameraDevice.StateCallback() {
+                @Override
+                public void onOpened(@NonNull CameraDevice camera) {
+                    //抓出 CameraDevice
+                    mCameraDevice = camera;
+                }
+
+                @Override
+                public void onDisconnected(@NonNull CameraDevice camera) {
+                    camera.close();
+                    mCameraDevice = null;
+
+                }
+
+                @Override
+                public void onError(@NonNull CameraDevice camera, int error) {
+                    camera.close();
+
+                }
+            }, null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 初始化 TextureView
+     */
+    private void initTextures() {
+        //取得自訂義的 TextureView
+        multiVideoTexture = findViewById(R.id.multi_texture);
+        //監聽 TextureView
+        multiVideoTexture.setSurfaceTextureCreatedListener(new GLMultiTexProducerView.SurfaceTextureCreatedListener() {
+            @Override
+            public void onCreated(List<GLTexture> glTextureList) {
+                mediaSurfaces.clear();
+                for (int i = 0; i < mediaPlayers.size(); i++) {
+                    GLTexture glTexture = glTextureList.get(i);
+                    mediaSurfaces.add(new Surface(glTexture.getSurfaceTexture()));
+                }
+
+                //建立Session，把初始化好的 TextureView 傳入
+                createCameraPreviewSession(glTextureList.get(2).getSurfaceTexture());
+            }
+        });
+    }
+
+    /**
+     * 以取得的 TextureView 建立 Session
+     */
+    private void createCameraPreviewSession(SurfaceTexture texture) {
+        try {
+            assert texture != null;
+            // We configure the size of default buffer to be the size of camera preview we want.
+//            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+
+            // This is the output Surface we need to start preview.
+            //設定 Surface
+            Surface surface = new Surface(texture);
+
+            // We set up a CaptureRequest.Builder with the output Surface.
+            final CaptureRequest.Builder mPreviewRequestBuilder
+                    = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            //指定 Surface 為輸出目標
+            mPreviewRequestBuilder.addTarget(surface);
+
+            // Here, we create a CameraCaptureSession for camera preview.
+            mCameraDevice.createCaptureSession(Arrays.asList(surface),
+                    new CameraCaptureSession.StateCallback() {
+
+                        @Override
+                        public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                            // The camera is already closed
+                            if (null == mCameraDevice) {
+                                return;
+                            }
+
+                            // When the session is ready, we start displaying the preview.
+                            mCaptureSession = cameraCaptureSession;
+                            try {
+                                // Auto focus should be continuous for camera preview.
+                                //指定對焦模式
+                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+                                //建立 Request
+                                // Finally, we start displaying the camera preview.
+                                CaptureRequest mPreviewRequest = mPreviewRequestBuilder.build();
+                                //在 Session 中連續發出 Request 供預覽
+                                mCaptureSession.setRepeatingRequest(mPreviewRequest,
+                                        null, null);
+                            } catch (CameraAccessException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onConfigureFailed(
+                                @NonNull CameraCaptureSession cameraCaptureSession) {
+                            Toast.makeText(MultiTextureActivity.this, "Failed", Toast.LENGTH_SHORT).show();
+                        }
+                    }, null
+            );
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * 釋放資源
+     */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        closeCamera();
+        multiVideoTexture.onPause();
+        for (MediaPlayerHelper mediaPlayer : mediaPlayers) {
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.stop();
+            }
+        }
+    }
+
+    /**
+     * 釋放資源
+     */
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        for (MediaPlayerHelper mediaPlayer : mediaPlayers) {
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.release();
+            }
+        }
+    }
+
+    /**
+     * 關閉相機
+     */
+    private void closeCamera() {
+        if (null != mCaptureSession) {
+            mCaptureSession.close();
+            mCaptureSession = null;
+        }
+        if (null != mCameraDevice) {
+            mCameraDevice.close();
+            mCameraDevice = null;
+        }
+    }
+
+
+    /**
+     * 播放影片
+     * 連結到 xml 按鈕
+     */
     public void onClickStart(View view) {
         for (int i = 0; i < mediaPlayers.size(); i++) {
             final MediaPlayerHelper mediaPlayer = mediaPlayers.get(i);
@@ -255,10 +299,14 @@ public class MultiTextureActivity extends AppCompatActivity {
             if ((mediaPlayer.isPlaying() || mediaPlayer.isLooping())) {
                 continue;
             }
+            //播放影片
             playMedia(mediaPlayer, mediaSurface);
         }
     }
 
+    /**
+     * 播放影片
+     */
     private void playMedia(MediaPlayerHelper mediaPlayer, Surface mediaSurface) {
         mediaPlayer.playMedia(this, mediaSurface);
     }

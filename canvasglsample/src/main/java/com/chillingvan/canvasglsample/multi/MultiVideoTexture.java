@@ -20,6 +20,8 @@ import java.util.List;
  */
 public class MultiVideoTexture extends GLMultiTexProducerView {
 
+    //設定雙圖片混合濾鏡
+    //這邊設定的濾鏡會取兩張貼圖中最亮的顏色顯示
     private TwoTextureFilter textureFilter = new LightenBlendFilter();
 
     public MultiVideoTexture(Context context) {

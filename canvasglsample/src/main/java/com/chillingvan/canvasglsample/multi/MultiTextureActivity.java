@@ -31,6 +31,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 此範例有三個 Surface 並列
+ * 一開始左邊的 Surface 會顯示鏡頭預覽畫面
+ * 點擊按鈕後，左邊和中間的 Surface 會開始播放影片；右邊的 Surface 會顯示鏡頭預覽與右邊影片的混合影像，此影像採用 LightenBlendFilter 濾鏡
+ */
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class MultiTextureActivity extends AppCompatActivity {
 
@@ -39,10 +44,11 @@ public class MultiTextureActivity extends AppCompatActivity {
     private String mCameraId;
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCaptureSession;
-    //此為自定義的 TextureView 裡面有指定套用濾鏡
+    //此為自定義的 TextureView 裡面有指定右畫面要套用的濾鏡
     private MultiVideoTexture multiVideoTexture;
 
     {
+        //指定要播放的兩個影片
         mediaPlayers.add(new MediaPlayerHelper(MediaPlayerHelper.TEST_VIDEO_MP4));
         mediaPlayers.add(new MediaPlayerHelper(MediaPlayerHelper.TEST_VIDEO_MP4_2));
     }
@@ -172,12 +178,16 @@ public class MultiTextureActivity extends AppCompatActivity {
             @Override
             public void onCreated(List<GLTexture> glTextureList) {
                 mediaSurfaces.clear();
+
+                //根據 mediaPlayer 的數量加入同等數量的 Surface
+                //這邊只有兩個 Surface，即第一個(左)和第二個(中)
                 for (int i = 0; i < mediaPlayers.size(); i++) {
                     GLTexture glTexture = glTextureList.get(i);
                     mediaSurfaces.add(new Surface(glTexture.getSurfaceTexture()));
                 }
 
-                //建立Session，把初始化好的 TextureView 傳入
+                //建立Session，指定鏡頭的預覽影片在哪個 Surface 播放
+                //這邊指定第三個 Surface，即最右邊的 Surface
                 createCameraPreviewSession(glTextureList.get(2).getSurfaceTexture());
             }
         });
@@ -293,6 +303,7 @@ public class MultiTextureActivity extends AppCompatActivity {
      * 連結到 xml 按鈕
      */
     public void onClickStart(View view) {
+        //此處只有左邊和中間的 Surface 會播放 mediaPlayer 的影片
         for (int i = 0; i < mediaPlayers.size(); i++) {
             final MediaPlayerHelper mediaPlayer = mediaPlayers.get(i);
             final Surface mediaSurface = mediaSurfaces.get(i);

@@ -11,6 +11,7 @@ import com.chillingvan.canvasgl.glview.texture.GLTexture;
 import com.chillingvan.canvasgl.glview.texture.gles.EglContextWrapper;
 import com.chillingvan.canvasgl.glview.texture.gles.GLThread;
 import com.chillingvan.canvasgl.textureFilter.LightenBlendFilter;
+import com.chillingvan.canvasgl.textureFilter.PixelationFilter;
 import com.chillingvan.canvasgl.textureFilter.TwoTextureFilter;
 
 import java.util.List;
@@ -64,7 +65,12 @@ public class MultiVideoTexture extends GLMultiTexProducerView {
             rawTexture.setIsFlippedVertically(true);
             // An example for two texture filter with RawTexture
             if (i == 2) {
+                //指定濾鏡要用的第二張貼圖
+                //這邊若get(0)是用左方卡通影片，若get(0)是用左方卡通影片
                 textureFilter.setSecondRawTexture(producedTextures.get(0));
+
+                //繪製影像到 Surface
+                //引數6：設定濾鏡，這邊採用 TwoTextureFilter，此濾鏡會結合另一張 texture 來合成
                 canvas.drawSurfaceTexture(rawTexture, texture.getSurfaceTexture(), left, 0, left + getWidth()/size, getHeight(), textureFilter);
             } else {
                 canvas.drawSurfaceTexture(rawTexture, texture.getSurfaceTexture(), left, 0, left + getWidth()/size, getHeight());

@@ -9,6 +9,7 @@
     tools:context=".multi.MultiTextureActivity">
 
 
+    <!--  使用客製化的 TectureView  -->
     <com.chillingvan.canvasglsample.multi.MultiVideoTexture
         android:id="@+id/multi_texture"
         android:layout_width="match_parent"
